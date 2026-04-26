@@ -1,4 +1,4 @@
-console.log("✅ ADMIN ROUTES LOADED");
+
 
 import express from "express";
 import cookieParser from "cookie-parser";
@@ -13,7 +13,7 @@ import availabilityRouter from "./routes/availability.routes.js";
 import bookingRouter from "./routes/booking.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
 import reviewRouter from "./routes/review.routes.js";
-import wishlistRouter from "./routes/wishlist.routes.js";
+import wishlistRoutes from "./routes/wishlist.routes.js";
 import hostVerificationRouter from "./routes/hostVerification.routes.js";
 //ADMIN route for admin dashboard
 import adminRouter from "./routes/admin.routes.js";
@@ -89,7 +89,11 @@ app.use("/api/v1/availability", availabilityRouter);
 app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/reviews", reviewRouter);
-app.use("/api/v1/wishlist", wishlistRouter);
 app.use("/api/v1/host-verification", hostVerificationRouter);
+/* =======================
+   WISHLIST ROUTES
+======================= */
+app.use("/api/v1/wishlist", wishlistRoutes);
+
 
 export { app };

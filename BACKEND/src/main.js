@@ -1,3 +1,4 @@
+//main backend file to start the server and connect to the database
 import dotenv from 'dotenv';
 import { app } from './app.js';
 import { connectDB } from './db/main.js';
