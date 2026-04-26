@@ -12,8 +12,10 @@ const protect = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
     // Ensure req.user.id is set from decoded token (handle both '_id' and 'id' fields)
     req.user = {
-      ...decoded,
+      //...decoded,
       id: decoded._id || decoded.id,
+      role: decoded.role,   // ✅ explicitly add
+      email: decoded.email
     }
     next()
   } catch {

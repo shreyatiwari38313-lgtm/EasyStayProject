@@ -12,27 +12,75 @@ const API = axios.create({
 });
 
 // Add access token automatically to protected routes
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  console.log("🔗 [AXIOS] Request config:", {
-    url: config.url,
-    method: config.method,
-    baseURL: config.baseURL,
-    headers: config.headers
-  });
-  return config;
-}, (error) => {
-  console.error("❌ [AXIOS] Request interceptor error:", error);
-  return Promise.reject(error);
-});
+// API.interceptors.request.use((config) => {
+//   const token = localStorage.getItem("accessToken");
+//   if (token) {
+//     config.headers.Authorization = `Bearer ${token}`;
+//   }
 
-// Add response interceptor for better error handling
+//   console.log("🔗 [AXIOS] Request config:", {
+//     url: config.url,
+//     method: config.method,
+//     baseURL: config.baseURL,
+//     headers: config.headers
+//   });
+//   return config;
+// }, (error) => {
+//   console.error("❌ [AXIOS] Request interceptor error:", error);
+//   return Promise.reject(error);
+// });
+
+// // Add response interceptor for better error handling
+// API.interceptors.response.use(
+//   (response) => {
+//     console.log("✅ [AXIOS] Response received:", response.status, response.data);
+//     return response;
+//   },
+//   (error) => {
+//     console.error("❌ [AXIOS] Response error:", {
+//       status: error.response?.status,
+//       data: error.response?.data,
+//       message: error.message,
+//       isNetwork: error.code === 'ERR_NETWORK' || error.message === 'Network Error'
+//     });
+//     return Promise.reject(error);
+//   }
+// );
+
+
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("accessToken");
+
+    // ❗ login & register ke liye token mat bhejo
+    if (
+      token &&
+      !config.url?.includes("/auth/login") &&
+      !config.url?.includes("/auth/register")
+    ) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Debug log
+    console.log("🔗 [AXIOS] Request config:", {
+      url: config.url,
+      method: config.method,
+      baseURL: config.baseURL,
+      headers: config.headers,
+    });
+
+    return config;
+  },
+  (error) => {
+    console.error("❌ [AXIOS] Request interceptor error:", error);
+    return Promise.reject(error);
+  }
+);
+
+// ✅ Response interceptor (same as yours, just clean)
 API.interceptors.response.use(
   (response) => {
-    console.log("✅ [AXIOS] Response received:", response.status, response.data);
+    console.log("✅ [AXIOS] Response:", response.status);
     return response;
   },
   (error) => {
@@ -40,7 +88,6 @@ API.interceptors.response.use(
       status: error.response?.status,
       data: error.response?.data,
       message: error.message,
-      isNetwork: error.code === 'ERR_NETWORK' || error.message === 'Network Error'
     });
     return Promise.reject(error);
   }

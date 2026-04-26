@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import GuestDashboard from "./pages/GuestDashboard";
 import HostDashboard from "./pages/HostDashboard";
+import AdminDashboard from "./pages/AdminDashboard"; // ✅ Important
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Payment from "./pages/Payment";
@@ -47,6 +48,10 @@ const App = () => (
             </ProtectedRoute>
           }
         />
+
+      
+        {/* ✅ ADD admin dashboard ROUTE */}
+          <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/payment" element={<Payment/>}/>
 
         {/* Catch-all */}

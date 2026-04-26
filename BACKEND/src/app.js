@@ -13,6 +13,9 @@ import paymentRouter from "./routes/payment.routes.js";
 import reviewRouter from "./routes/review.routes.js";
 import wishlistRouter from "./routes/wishlist.routes.js";
 import hostVerificationRouter from "./routes/hostVerification.routes.js";
+//ADMIN route for admin dashboard
+import { adminRoutes } from "./routes/admin.routes.js";
+
 
 const app = express();
 
@@ -63,11 +66,15 @@ app.get("/", (_req, res) => {
   res.send("EasyStay API running 🚀");
 });
 
+//Admin Routes
+
+app.use("/api/v1/admin", adminRoutes);
 /* =======================
    AUTH + USER ROUTES
 ======================= */
 app.use("/api/v1/auth", authRouter); // register, login, logout, refresh
 app.use("/api/v1/users", userRouter); // me, update, delete
+
 
 /* =======================
    OTHER MODULE ROUTES

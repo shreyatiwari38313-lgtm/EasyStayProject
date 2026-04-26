@@ -59,3 +59,55 @@ export const cancelBooking = async (bookingId: string) => {
     throw error;
   }
 };
+
+export const updateBooking = async (
+  bookingId: string,
+  bookingData: {
+    checkIn?: Date;
+    checkOut?: Date;
+    guests?: number;
+    status?: string;
+  }
+) => {
+  try {
+    const payload = {
+      ...bookingData,
+      ...(bookingData.checkIn && { checkIn: bookingData.checkIn.toISOString() }),
+      ...(bookingData.checkOut && { checkOut: bookingData.checkOut.toISOString() }),
+    };
+    const response = await bookingAPI.patch(`/bookings/${bookingId}`, payload);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateBookingStatus = async (
+  bookingId: string,
+  status: "pending" | "confirmed" | "checked_in" | "completed" | "cancelled"
+) => {
+  try {
+    const response = await bookingAPI.patch(`/bookings/${bookingId}/status`, { status });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteBooking = async (bookingId: string) => {
+  try {
+    const response = await bookingAPI.delete(`/bookings/${bookingId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getAllBookings = async () => {
+  try {
+    const response = await bookingAPI.get("/bookings");
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

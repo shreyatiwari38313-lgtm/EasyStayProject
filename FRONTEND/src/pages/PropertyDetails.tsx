@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -13,12 +12,15 @@ import {
 import { useState } from "react";
 import { format } from "date-fns";
 import properties from "@/lib/propertiesData";
+import { useToast } from "@/hooks/use-toast";
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
+  const [guests, setGuests] = useState(1);
   
   // Find property by id from shared data
   const property = properties.find((p) => p.id === id);
@@ -42,7 +44,51 @@ const PropertyDetails = () => {
       </div>
     );
   }
-  
+
+  const calculateNights = () => {
+    if (checkIn && checkOut) {
+      return Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    return 3; // default
+  };
+
+  const nights = calculateNights();
+  const totalPrice = property.price * nights + 50; // 50 is service fee
+
+  const handleReserve = () => {
+    if (!checkIn || !checkOut) {
+      toast({
+        title: "Missing Dates",
+        description: "Please select both check-in and check-out dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (checkOut <= checkIn) {
+      toast({
+        title: "Invalid Dates",
+        description: "Check-out date must be after check-in date",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const user = localStorage.getItem("user");
+    const paymentState = {
+      propertyId: property.id,
+      price: totalPrice,
+      checkIn: checkIn.toISOString(),
+      checkOut: checkOut.toISOString(),
+      guests,
+    };
+
+    if (user) {
+      navigate("/payment", { state: paymentState });
+    } else {
+      navigate("/login", { state: { redirectTo: "/payment", redirectState: paymentState } });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -189,22 +235,31 @@ const PropertyDetails = () => {
                       </PopoverContent>
                     </Popover>
                   </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Guests</label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="px-3 py-2 border rounded-lg hover:bg-accent transition"
+                        onClick={() => setGuests(Math.max(1, guests - 1))}
+                      >
+                        -
+                      </button>
+                      <span className="flex-1 text-center">{guests}</span>
+                      <button
+                        className="px-3 py-2 border rounded-lg hover:bg-accent transition"
+                        onClick={() => setGuests(Math.min(property.guests, guests + 1))}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 
                 <Button
                   className="w-full mb-4"
                   size="lg"
-                  onClick={() => {
-                    // simple auth check: presence of `user` in localStorage
-                    const user = localStorage.getItem("user");
-                    const paymentState = { propertyId: property.id, price: property.price };
-                    if (user) {
-                      navigate("/payment", { state: paymentState });
-                    } else {
-                      // redirect to login and pass intended destination
-                      navigate("/login", { state: { redirectTo: "/payment", redirectState: paymentState } });
-                    }
-                  }}
+                  onClick={handleReserve}
                 >
                   Reserve Now
                 </Button>
@@ -215,8 +270,8 @@ const PropertyDetails = () => {
                 
                 <div className="mt-6 pt-6 border-t space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">₹{property.price} × 3 nights</span>
-                    <span>₹{property.price * 3}</span>
+                    <span className="text-muted-foreground">₹{property.price} × {nights} nights</span>
+                    <span>₹{property.price * nights}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Service fee</span>
@@ -224,7 +279,7 @@ const PropertyDetails = () => {
                   </div>
                   <div className="flex justify-between font-semibold pt-2 border-t">
                     <span>Total</span>
-                    <span>₹{property.price * 3 + 50}</span>
+                    <span>₹{totalPrice}</span>
                   </div>
                 </div>
               </CardContent>

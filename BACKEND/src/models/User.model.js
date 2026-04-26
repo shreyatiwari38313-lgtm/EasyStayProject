@@ -7,14 +7,14 @@ const userSchema = new mongoose.Schema({
    password : { type: String, required: true },
    phone: String,
 
-   role:{ type: String, enum: ["guest","host"], default : "guest"},
+   role:{ type: String, enum: ["guest","host","admin"], default : "guest"},
    profileImage: String,  //cloudinary
    createdAt: { type: Date, default: Date.now }
 },{timestamps: true})
 
 //hooks 
-userSchema.pre("save", async function(next){
-   if(!this.isModified("password")) return next();
+userSchema.pre("save", async function(){
+   if(!this.isModified("password")) return; 
    this.password = await bcrypt.hash(this.password,10)
    
 })
@@ -30,7 +30,8 @@ userSchema.methods.generateAccessToken = function() {
       {
          _id: this.id,
          name: this.name,
-         email: this.email
+         email: this.email,
+         role: this.role
       },
       process.env.ACCESS_TOKEN_SECRET,
       {

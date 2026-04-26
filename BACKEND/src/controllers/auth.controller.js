@@ -45,12 +45,22 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  // 👇 YAHAN ADD KARO
+   console.log("Entered Email:", email);
+  console.log("Entered Password:", password);
+
   const user = await User.findOne({ email });
   if (!user) {
     return res.status(401).json({ message: "Invalid credentials" });
   }
+  // 👇 YAHAN ADD KARO
+   console.log("Stored Password:", user.password);
 
   const isPasswordValid = await user.isPasswordCorrect(password);
+
+  // 👇 YAHAN ADD KARO
+   console.log("Password Match:", isPasswordValid);
+
   if (!isPasswordValid) {
     return res.status(401).json({ message: "Invalid credentials" });
   }
