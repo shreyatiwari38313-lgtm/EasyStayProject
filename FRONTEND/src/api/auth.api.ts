@@ -161,6 +161,8 @@ export const loginUser = async (
     console.log("🚀 [FRONTEND] Logging in with email:", payload.email);
     const response = await API.post<AuthResponse>("/auth/login", payload);
     console.log("✅ [FRONTEND] Login successful:", response.data);
+    console.log("📊 [FRONTEND] Response user object:", response.data.user);
+    console.log("📊 [FRONTEND] Response user role:", response.data.user?.role);
 
     // Save tokens
     if (response.data.accessToken) localStorage.setItem("accessToken", response.data.accessToken);

@@ -1,3 +1,5 @@
+console.log("✅ ADMIN ROUTES LOADED");
+
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -14,7 +16,7 @@ import reviewRouter from "./routes/review.routes.js";
 import wishlistRouter from "./routes/wishlist.routes.js";
 import hostVerificationRouter from "./routes/hostVerification.routes.js";
 //ADMIN route for admin dashboard
-import { adminRoutes } from "./routes/admin.routes.js";
+import adminRouter from "./routes/admin.routes.js";
 
 
 const app = express();
@@ -22,7 +24,7 @@ const app = express();
 /* =======================
    CORS CONFIG
 ======================= */
-const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:8080";
+const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:8080";
 const allowedOrigins = corsOrigin.split(",").map(origin => origin.trim());
 
 app.use(
@@ -68,7 +70,9 @@ app.get("/", (_req, res) => {
 
 //Admin Routes
 
-app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/admin", adminRouter);
+
+console.log("🚀 ADMIN ROUTE MOUNTED");
 /* =======================
    AUTH + USER ROUTES
 ======================= */

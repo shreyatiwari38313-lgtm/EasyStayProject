@@ -35,18 +35,6 @@ type Review = {
   comment: string;
 };
 
-const sampleUsers: User[] = [
-  { id: "u1", name: "Alice Johnson", email: "alice@example.com" },
-  { id: "u2", name: "Bob Smith", email: "bob@example.com" },
-  { id: "u3", name: "Chen Li", email: "chen@example.com" },
-];
-
-const sampleProperties: Property[] = [
-  { id: "p1", title: "Cozy Downtown Studio", city: "Boston", price: 120, status: "pending", description: "Bright studio close to public transit." },
-  { id: "p2", title: "Seaside Bungalow", city: "San Diego", price: 230, status: "approved", description: "Ocean views and private patio." },
-  { id: "p3", title: "Mountain Cabin", city: "Aspen", price: 300, status: "pending", description: "Rustic cabin with fireplace." },
-];
-
 const sampleBookings: Booking[] = [
   { id: "b1", user: "Alice Johnson", property: "Cozy Downtown Studio", from: "2026-03-01", to: "2026-03-05", status: "confirmed" },
   { id: "b2", user: "Bob Smith", property: "Seaside Bungalow", from: "2026-04-10", to: "2026-04-15", status: "pending" },
@@ -59,15 +47,135 @@ const sampleReviews: Review[] = [
 
 const revenueData = [1200, 1500, 1800, 1700, 2400, 2100, 2600, 3000, 2800, 3200, 3600, 4000];
 
+const API_BASE = (import.meta.env.VITE_API_URL as string) || (import.meta.env.VITE_API_BASE as string) || "http://localhost:8000";
+
+const getInitialAdminStatus = (): boolean => {
+  try {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      return user?.role === "admin";
+    }
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 const AdminDashboard: React.FC = () => {
   const [active, setActive] = useState<string>("overview");
-  const [users, setUsers] = useState<User[]>(sampleUsers);
-  const [properties, setProperties] = useState<Property[]>(sampleProperties);
+  const [users, setUsers] = useState<User[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [bookings] = useState<Booking[]>(sampleBookings);
   const [reviews] = useState<Review[]>(sampleReviews);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(getInitialAdminStatus());
+  const [loading, setLoading] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+
+  // Just verify isAdmin is still true on mount (in case localStorage changed)
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    console.log("📦 [ADMIN] Local storage 'user' value:", userData);
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        console.log("📦 [ADMIN] Parsed user object:", user);
+        console.log("📦 [ADMIN] User role:", user?.role);
+        const isAdminUser = user?.role === "admin";
+        setIsAdmin(isAdminUser);
+        console.log("📦 [ADMIN] Set isAdmin to:", isAdminUser);
+      } catch {
+        console.error("❌ [ADMIN] Failed to parse user from localStorage");
+        setIsAdmin(false);
+      }
+    } else {
+      console.warn("⚠️ [ADMIN] No 'user' in localStorage");
+      setIsAdmin(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      if (!isAdmin || !token) {
+        console.warn("⚠️ Admin fetch skipped: isAdmin=" + isAdmin + ", token=" + !!token);
+        return;
+      }
+
+      console.log("📡 Fetching admin data with token:", token.substring(0, 20) + "...");
+      setLoading(true);
+      setFetchError(null);
+
+      try {
+        const [usersRes, propertiesRes] = await Promise.all([
+          fetch(`${API_BASE}/api/v1/admin/users`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          }),
+          fetch(`${API_BASE}/api/v1/admin/properties`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          })
+        ]);
+
+        console.log("📊 Users response:", usersRes.status, usersRes.statusText);
+        console.log("📊 Properties response:", propertiesRes.status, propertiesRes.statusText);
+
+        if (!usersRes.ok) {
+          const errorData = await usersRes.json().catch(() => ({ message: `HTTP ${usersRes.status}` }));
+          throw new Error(`Users fetch failed (${usersRes.status}): ${errorData.message || "Unknown error"}`);
+        }
+        if (!propertiesRes.ok) {
+          const errorData = await propertiesRes.json().catch(() => ({ message: `HTTP ${propertiesRes.status}` }));
+          throw new Error(`Properties fetch failed (${propertiesRes.status}): ${errorData.message || "Unknown error"}`);
+        }
+
+        const usersData = await usersRes.json();
+        const propertiesData = await propertiesRes.json();
+
+        console.log("✅ Users data:", usersData);
+        console.log("✅ Properties data:", propertiesData);
+
+        setUsers(
+          Array.isArray(usersData)
+            ? usersData.map((user: any) => ({
+                id: user._id || user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+              }))
+            : []
+        );
+
+        setProperties(
+          Array.isArray(propertiesData)
+            ? propertiesData.map((property: any) => ({
+                id: property._id || property.id,
+                title: property.title,
+                city: property.address?.city || property.city || "Unknown",
+                price: property.pricePerNight ?? property.price ?? 0,
+                status: property.isActive ? "approved" : "pending",
+                description: property.description ?? "No description available"
+              }))
+            : []
+        );
+      } catch (error: any) {
+        console.error("❌ Error fetching admin data:", error);
+        setFetchError(error.message || "Unable to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, [isAdmin, token]);
 
  useEffect(() => {
   const userData = localStorage.getItem("user");
@@ -182,6 +290,15 @@ const AdminDashboard: React.FC = () => {
               <h1 className="text-2xl font-semibold text-slate-800">Dashboard</h1>
               <div className="text-sm text-slate-500">Welcome back, Admin</div>
             </div>
+
+            {loading && (
+              <div className="mb-4 rounded-lg bg-slate-100 px-4 py-3 text-slate-700">Loading admin data...</div>
+            )}
+            {fetchError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                {fetchError}
+              </div>
+            )}
 
             {/* Overview */}
             {active === "overview" && (

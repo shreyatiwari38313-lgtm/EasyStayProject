@@ -201,16 +201,19 @@ const Login = () => {
 
       // ✅ Store user
       if (response.user) {
+        console.log("💾 [LOGIN] Storing user to localStorage:", response.user);
         localStorage.setItem("user", JSON.stringify(response.user));
       }
 
       // ✅ Store token (IMPORTANT) - this is needed for authenticated requests
       if (response.accessToken) {
+        localStorage.setItem("accessToken", response.accessToken);
         localStorage.setItem("token", response.accessToken);
       }
 
       // ✅ Role-based navigation (FIXED)
       const role: string = response.user?.role || "guest";
+      console.log("🔐 [LOGIN] User role from response:", role);
 
       if (role === "admin") {
         navigate("/admin-dashboard");
