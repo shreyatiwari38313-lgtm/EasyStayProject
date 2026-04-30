@@ -1,3 +1,4 @@
+import Amenity from "../models/Amenity.model.js";
 import Property from "../models/Property.model.js";
 import { uploadOnCloud } from "../utils/cloudinary.js";
 
@@ -43,6 +44,9 @@ export const createProperty = async (req, res) => {
     if (!Array.isArray(amenities)) {
       amenities = [];
     }
+
+    // ✅ Convert amenity names → ObjectIds
+const amenityIds = Array.isArray(amenities) ? amenities : [];
     
     const city = address?.city || req.body.city;
 
@@ -103,10 +107,13 @@ export const createProperty = async (req, res) => {
       isActive: true,
       location,
       address,
-      amenities,
+      amenities: amenityIds,
     };
 
     const property = await Property.create(propertyPayload);
+    // ✅ ADD THIS LINE HERE
+    console.log("RAW amenities from frontend:", req.body.amenities);
+    console.log("Converted amenity IDs:", amenityIds);
 
     res.status(201).json({
       success: true,
@@ -134,10 +141,13 @@ export const getAllProperties = async (req, res) => {
       type,
       sort,
       page = 1,
-      limit = 10,
+       limit = 100, 
     } = req.query;
 
-    let query = { isActive: true, status: "approved" };
+    let query = {
+  isActive: true,
+  status: { $regex: "^approved$", $options: "i" },
+};
 
     // Search
     if (search) {
@@ -168,7 +178,8 @@ export const getAllProperties = async (req, res) => {
       .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(Number(limit))
-      .populate("hostId", "name");
+  .populate("hostId", "name email avatar")
+  .populate("amenities", "name");
 
     res.status(200).json({
       success: true,
@@ -186,7 +197,8 @@ export const getAllProperties = async (req, res) => {
 export const getPropertyById = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id)
-      .populate("hostId", "name email");
+  .populate("hostId", "name email avatar")
+  .populate("amenities", "name");
 
     if (!property || !property.isActive) {
       return res.status(404).json({
@@ -310,13 +322,34 @@ export const getMyProperties = async (req, res) => {
 ===================================== */
 export const updatePropertyStatus = async (req, res) => {
   try {
-    const { status } = req.body; // approved | rejected
+    let status;
 
-    const property = await Property.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    // 🔥 Decide status based on route
+    if (req.path.includes("approve")) {
+      status = "approved";
+    } else if (req.path.includes("reject")) {
+      status = "rejected";
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action",
+      });
+    }
+// replaced code 
+
+    let updateData = { status };
+
+  if (status === "approved") {
+     updateData.isActive = true;
+  } else if (status === "rejected") {
+     updateData.isActive = false;
+  }
+
+const property = await Property.findByIdAndUpdate(
+  req.params.id,
+  updateData,
+  { new: true }
+);
 
     if (!property) {
       return res.status(404).json({
@@ -331,6 +364,9 @@ export const updatePropertyStatus = async (req, res) => {
       property,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };

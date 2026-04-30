@@ -161,7 +161,7 @@ const AdminDashboard: React.FC = () => {
                 title: property.title,
                 city: property.address?.city || property.city || "Unknown",
                 price: property.pricePerNight ?? property.price ?? 0,
-                status: property.isActive ? "approved" : "pending",
+                status: property.status || "pending",
                 description: property.description ?? "No description available"
               }))
             : []
@@ -218,9 +218,31 @@ const AdminDashboard: React.FC = () => {
     setIsModalOpen(false);
   }
 
-  function updatePropertyStatus(id: string, status: Property["status"]) {
-    setProperties((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+
+  //added this function to update property status on approve/reject
+async function updatePropertyStatus(id: string, status: Property["status"]) {
+  try {
+    const endpoint =
+      status === "approved"
+        ? `${API_BASE}/api/v1/properties/admin/${id}/approve`
+        : `${API_BASE}/api/v1/properties/admin/${id}/reject`;
+
+    await fetch(endpoint, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    // ✅ update UI after success
+    setProperties((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status } : p))
+    );
+  } catch (error) {
+    console.error("❌ Failed to update property status:", error);
   }
+}
 
   if (!isAdmin) {
     return (

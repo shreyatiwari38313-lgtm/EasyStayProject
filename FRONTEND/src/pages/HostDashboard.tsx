@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Home, DollarSign, Calendar, Star, TrendingUp, MessageSquare, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { getAmenities } from "@/api/amenity.api";
 
 const HostDashboard = () => {
   const [properties, setProperties] = useState<any[]>([]);
@@ -31,9 +32,23 @@ const HostDashboard = () => {
     zipCode: "",
     longitude: "0",
     latitude: "0",
-    amenities: "",
+    amenities: [] as string[],
     images: [] as File[]
   });
+
+  // ✅ ADD HERE
+const handleAmenityChange = (value: string) => {
+  setForm((prev) => {
+    const exists = prev.amenities.includes(value);
+
+    return {
+      ...prev,
+      amenities: exists
+        ? prev.amenities.filter((a) => a !== value)
+        : [...prev.amenities, value],
+    };
+  });
+};
 
   // API base (use Vite env variable VITE_API_BASE if available)
   const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8000";
@@ -128,8 +143,10 @@ const HostDashboard = () => {
       formData.append("maxGuests", form.maxGuests ? form.maxGuests : "1");
       formData.append("bedrooms", form.bedrooms);
       formData.append("bathrooms", form.bathrooms);
+      formData.append("amenities", JSON.stringify(form.amenities));
       formData.append("longitude", form.longitude);
       formData.append("latitude", form.latitude);
+      
       
       // Add address as nested object
       const addressObj = {
@@ -140,10 +157,6 @@ const HostDashboard = () => {
         zipCode: form.zipCode
       };
       formData.append("address", JSON.stringify(addressObj));
-      
-      // Note: amenities require ObjectIds (references to Amenity documents)
-      // For now, we're skipping amenities in the basic property creation
-      // TODO: Implement amenity selection with actual Amenity ObjectIds
       
       // Add image files
       if (form.images && form.images.length > 0) {
@@ -195,7 +208,7 @@ const HostDashboard = () => {
         zipCode: "",
         longitude: "0",
         latitude: "0",
-        amenities: "",
+        amenities: [],
         images: []
       });
 
@@ -506,17 +519,23 @@ const HostDashboard = () => {
                   </div>
 
                   {/* Amenities */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-1">Amenities (comma separated)</label>
-                    <input
-                      type="text"
-                      name="amenities"
-                      value={form.amenities}
-                      onChange={handleInputChange}
-                      placeholder="e.g., WiFi, Pool, Parking, AC"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
+                  {/* Amenities */}
+<div>
+  <label className="block text-sm font-semibold mb-2">
+    Select Amenities
+  </label>
+
+  {["WiFi", "Kitchen", "Free Parking", "AC", "Swimming Pool"].map((item) => (
+    <label key={item} className="block">
+      <input
+        type="checkbox"
+        checked={form.amenities.includes(item)}
+        onChange={() => handleAmenityChange(item)}
+      />
+      {item}
+    </label>
+  ))}
+</div>
 
                   {/* Images Upload */}
                   <div>

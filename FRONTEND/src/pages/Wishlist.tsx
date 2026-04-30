@@ -8,12 +8,12 @@ const Wishlist = () => {
   const [items, setItems] = useState([]);
 
   const fetchWishlist = async () => {
-    const res = await axios.get("http://localhost:8000/api/v1/wishlist");
+    const res = await axios.get("http://localhost:8080/api/v1/wishlist");
     setItems(res.data);
   };
 
   const removeItem = async (id: string) => {
-    await axios.delete(`http://localhost:8000/api/v1/wishlist/${id}`);
+    await axios.delete(`http://localhost:8080/api/v1/wishlist/${id}`);
     fetchWishlist();
   };
 

@@ -1,3 +1,5 @@
+
+
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -5,286 +7,337 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { 
-  Star, MapPin, Users, Wifi, Car, Coffee, 
-  Calendar as CalendarIcon, ChevronLeft 
+import {
+  Star,
+  MapPin,
+  Wifi,
+  Car,
+  Coffee,
+  Snowflake,
+  Waves,
+  Tv,
+  Refrigerator,
+  Wind,
+  Flame,
+  Utensils,
+  Calendar as CalendarIcon,
+  ChevronLeft,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import properties from "@/lib/propertiesData";
 import { useToast } from "@/hooks/use-toast";
+import { getPropertyById } from "@/api/property.api";
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const [property, setProperty] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
   const [guests, setGuests] = useState(1);
-  
-  // Find property by id from shared data
-  const property = properties.find((p) => p.id === id);
-  
+
+  useEffect(() => {
+    const fetchProperty = async () => {
+      try {
+        const data = await getPropertyById(id!);
+        setProperty(data);
+      } catch {
+        const dummy = properties.find((p) => p.id === id);
+        setProperty(dummy);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperty();
+  }, [id]);
+
+  if (loading) return <div className="text-center mt-10">Loading...</div>;
+
   if (!property) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <Link to="/properties">
-            <Button variant="ghost" className="mb-4">
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Back to Properties
-            </Button>
-          </Link>
-          <div className="mt-8 text-center">
-            <h2 className="text-2xl font-semibold">Property not found</h2>
-            <p className="text-muted-foreground mt-2">The property you're looking for doesn't exist.</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <div>Property not found</div>;
   }
 
-  const calculateNights = () => {
-    if (checkIn && checkOut) {
-      return Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-    }
-    return 3; // default
-  };
+  const price = property.pricePerNight || property.price;
+  const location = property.address
+    ? `${property.address.city}, ${property.address.country}`
+    : property.location;
 
-  const nights = calculateNights();
-  const totalPrice = property.price * nights + 50; // 50 is service fee
+    // ✅ ADD HERE
+const amenityIcons: Record<string, any> = {
+  WiFi: Wifi,
+  "Free Parking": Car,
+  Kitchen: Utensils,
+  AC: Snowflake,
+  "Swimming Pool": Waves,
+  TV: Tv,
+  Refrigerator: Refrigerator,
+  "Air Conditioning": Wind,
+  "Hot Water": Flame,
+  "Dining Area": Coffee,
+};
+
+  const images = Array.isArray(property.images)
+  ? property.images.map((img: any) => (typeof img === "string" ? img : img.url))
+  : [];
+
+  //added nights calculation logic here
+  const nights = checkIn && checkOut
+  ? Math.max(
+      Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)),
+      0
+    )
+  : 0;
+
+  const serviceFee = 50;
+  const totalPrice = nights > 0 ? price * nights + serviceFee : 0;
 
   const handleReserve = () => {
     if (!checkIn || !checkOut) {
       toast({
         title: "Missing Dates",
-        description: "Please select both check-in and check-out dates",
+        description: "Please select both dates",
         variant: "destructive",
       });
       return;
     }
 
-    if (checkOut <= checkIn) {
-      toast({
-        title: "Invalid Dates",
-        description: "Check-out date must be after check-in date",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const user = localStorage.getItem("user");
-    const paymentState = {
-      propertyId: property.id,
-      price: totalPrice,
-      checkIn: checkIn.toISOString(),
-      checkOut: checkOut.toISOString(),
-      guests,
-    };
-
-    if (user) {
-      navigate("/payment", { state: paymentState });
-    } else {
-      navigate("/login", { state: { redirectTo: "/payment", redirectState: paymentState } });
-    }
+    navigate("/payment", {
+      state: {
+        propertyId: property._id || property.id,
+        price: totalPrice,
+        checkIn,
+        checkOut,
+        guests,
+      },
+    });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <div className="container mx-auto px-4 py-8">
         <Link to="/properties">
           <Button variant="ghost" className="mb-4">
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Properties
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
           </Button>
         </Link>
-        
-        {/* Image Gallery */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 rounded-2xl overflow-hidden">
-          <div className="md:col-span-2 md:row-span-2">
-            <img 
-              src={property.images[0]} 
-              alt="Main view"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-            />
-          </div>
-          <div className="hidden md:block">
-            <img 
-              src={property.images[1]} 
-              alt="View 2"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-            />
-          </div>
-          <div className="hidden md:block">
-            <img 
-              src={property.images[2]} 
-              alt="View 3"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-            />
-          </div>
-        </div>
-        
+
+        {/* Images */}
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+  {images[0] && (
+    <img
+      src={images[0]}
+      className="col-span-2 h-full object-cover rounded-lg"
+    />
+  )}
+  {images[1] && <img src={images[1]} className="rounded-lg" />}
+  {images[2] && <img src={images[2]} className="rounded-lg" />}
+</div>
+
+       {/* MAIN GRID */}
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Property Info */}
+
+          {/* LEFT SIDE */}
           <div className="lg:col-span-2 space-y-6">
-            <div>
-              <h1 className="text-4xl font-bold mb-4">{property.title}</h1>
-              <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-4">
-                <div className="flex items-center gap-1">
-                  <Star className="h-5 w-5 fill-accent text-accent" />
-                  <span className="font-medium">{property.rating}</span>
-                  <span>({property.reviews} reviews)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  <span>{property.location}</span>
-                </div>
-              </div>
-              
-              <div className="flex gap-4">
-                <Badge variant="secondary">{property.guests} guests</Badge>
-                <Badge variant="secondary">{property.bedrooms} bedrooms</Badge>
-                <Badge variant="secondary">{property.bathrooms} bathrooms</Badge>
-              </div>
+
+            <h1 className="text-4xl font-bold">{property.title}</h1>
+
+            <div className="flex gap-4">
+              <span>⭐ {property.averageRating || property.rating}</span>
+              <span>{location}</span>
             </div>
+
+            <div className="flex gap-4">
+              <Badge>{property.maxGuests || property.guests} guests</Badge>
+              <Badge>{property.bedrooms} bedrooms</Badge>
+              <Badge>{property.bathrooms} bathrooms</Badge>
+            </div>
+
+            <p>{property.description}</p>
+
+            {/* Amenities */}
+
             
+            {/* <div>
+              <h2 className="text-xl font-semibold mb-2">Amenities</h2>
+              {property.amenities?.map((a: any, i: number) => (
+                <div key={i}>{a.name || a}</div>
+              ))}
+            </div> */}
+           {/* <Card>
+  <CardContent className="p-6">
+    <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
+
+    <div className="grid grid-cols-2 gap-4">
+      {property.amenities?.map((a: any, i: number) => {
+        const amenity = a.name || a;
+
+        return (
+          <div key={i} className="flex items-center gap-3">
+            {amenity === "WiFi" && (
+              <Wifi className="h-5 w-5 text-primary" />
+            )}
+            {amenity === "Free Parking" && (
+              <Car className="h-5 w-5 text-primary" />
+            )}
+            {amenity === "Kitchen" && (
+              <Coffee className="h-5 w-5 text-primary" />
+            )}
+
+            <span>{amenity}</span>
+          </div>
+        );
+      })}
+    </div>
+  </CardContent>
+</Card> */}
+
+
+<Card>
+  <CardContent className="p-6">
+    <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
+
+    <div className="grid grid-cols-2 gap-4">
+      {property.amenities?.map((a: any, i: number) => {
+        const amenity = a.name || a;
+        const Icon = amenityIcons[amenity];
+
+        return (
+          <div key={i} className="flex items-center gap-3">
+            {Icon && <Icon className="h-5 w-5 text-primary" />}
+            <span>{amenity}</span>
+          </div>
+        );
+      })}
+    </div>
+  </CardContent>
+</Card>
+
+            {/* ✅ HOST (NOW CORRECTLY PLACED) */}
             <Card>
               <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold mb-4">About this place</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  {property.description}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {property.amenities.map((amenity) => (
-                    <div key={amenity} className="flex items-center gap-3">
-                      {amenity === "WiFi" && <Wifi className="h-5 w-5 text-primary" />}
-                      {amenity === "Free Parking" && <Car className="h-5 w-5 text-primary" />}
-                      {amenity === "Kitchen" && <Coffee className="h-5 w-5 text-primary" />}
-                      <span>{amenity}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold mb-4">Meet your host</h2>
+                <h2 className="text-xl font-semibold mb-4">
+                  Meet your host
+                </h2>
+
                 <div className="flex items-center gap-4">
-                  <img 
-                    src={property.host.avatar} 
-                    alt={property.host.name}
-                    className="w-16 h-16 rounded-full object-cover"
+                  <img
+                    src={
+                      property.hostId?.avatar ||
+                      "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                    }
+                    className="w-14 h-14 rounded-full object-cover"
                   />
+
                   <div>
-                    <h3 className="font-semibold text-lg">{property.host.name}</h3>
+                    <h3 className="font-medium">
+                      {property.hostId?.name || "Host"}
+                    </h3>
                     <p className="text-sm text-muted-foreground">
-                      Hosting since {property.host.joinedDate}
+                      {property.hostId?.email || "No email available"}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-          
-          {/* Booking Card */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24 border-2">
-              <CardContent className="p-6">
-                <div className="mb-6">
-                  <span className="text-3xl font-bold text-primary">₹{property.price}</span>
-                  <span className="text-muted-foreground"> / night</span>
-                </div>
-                
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Check-in</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {checkIn ? format(checkIn, "PPP") : "Select date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={checkIn} onSelect={setCheckIn} />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Check-out</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {checkOut ? format(checkOut, "PPP") : "Select date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={checkOut} onSelect={setCheckOut} />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
 
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Guests</label>
-                    <div className="flex items-center gap-3">
-                      <button
-                        className="px-3 py-2 border rounded-lg hover:bg-accent transition"
-                        onClick={() => setGuests(Math.max(1, guests - 1))}
-                      >
-                        -
-                      </button>
-                      <span className="flex-1 text-center">{guests}</span>
-                      <button
-                        className="px-3 py-2 border rounded-lg hover:bg-accent transition"
-                        onClick={() => setGuests(Math.min(property.guests, guests + 1))}
-                      >
-                        +
-                      </button>
-                    </div>
+          </div>
+
+          {/* RIGHT SIDE (BOOKING) */}
+          <div>
+            <Card className="sticky top-24">
+              <CardContent className="p-6">
+
+                <h2 className="text-2xl font-bold">₹{price} / night</h2>
+
+                {/* Check-in */}
+                <div className="mt-4">
+                  <label className="text-sm">Check-in</label>
+                  <input
+                    type="date"
+                    className="w-full border rounded p-2"
+                    onChange={(e) =>
+                      setCheckIn(new Date(e.target.value))
+                    }
+                  />
+                </div>
+
+                {/* Check-out */}
+                <div className="mt-2">
+                  <label className="text-sm">Check-out</label>
+                  <input
+                    type="date"
+                    className="w-full border rounded p-2"
+                    onChange={(e) =>
+                      setCheckOut(new Date(e.target.value))
+                    }
+                  />
+                </div>
+
+                {/* Guests */}
+                <div className="mt-4 flex items-center justify-between">
+                  <span>Guests</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setGuests((g) => Math.max(1, g - 1))
+                      }
+                    >
+                      -
+                    </button>
+                    <span>{guests}</span>
+                    <button
+                      onClick={() =>
+                        setGuests((g) =>
+                          Math.min(property.maxGuests || 5, g + 1)
+                        )
+                      }
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
-                
+
                 <Button
-                  className="w-full mb-4"
-                  size="lg"
                   onClick={handleReserve}
+                  disabled={!checkIn || !checkOut || nights === 0}
+                  className="w-full mt-4"
                 >
                   Reserve Now
                 </Button>
-                
-                <p className="text-sm text-center text-muted-foreground">
+
+                <p className="text-sm text-center mt-2">
                   You won't be charged yet
                 </p>
-                
-                <div className="mt-6 pt-6 border-t space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">₹{property.price} × {nights} nights</span>
-                    <span>₹{property.price * nights}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Service fee</span>
-                    <span>₹50</span>
-                  </div>
-                  <div className="flex justify-between font-semibold pt-2 border-t">
-                    <span>Total</span>
-                    <span>₹{totalPrice}</span>
-                  </div>
+
+                <hr className="my-4" />
+
+                <div className="flex justify-between">
+                  <span>₹{price} × {nights} nights</span>
+                  <span>₹{price * nights}</span>
                 </div>
+
+                <div className="flex justify-between">
+                  <span>Service fee</span>
+                  <span>₹50</span>
+                </div>
+
+                <div className="flex justify-between font-bold mt-2">
+                  <span>Total</span>
+                  <span>₹{totalPrice}</span>
+                </div>
+
               </CardContent>
             </Card>
-          </div>
+            </div> 
         </div>
       </div>
     </div>
@@ -292,3 +345,301 @@ const PropertyDetails = () => {
 };
 
 export default PropertyDetails;
+
+
+
+
+// // import { useParams, Link, useNavigate } from "react-router-dom";
+// // import Navbar from "@/components/Navbar";
+// // import { Button } from "@/components/ui/button";
+// // import { Card, CardContent } from "@/components/ui/card";
+// // import { Badge } from "@/components/ui/badge";
+// // import { Calendar } from "@/components/ui/calendar";
+// // import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+// // import { 
+// //   Star, MapPin, Users, Wifi, Car, Coffee, 
+// //   Calendar as CalendarIcon, ChevronLeft 
+// // } from "lucide-react";
+// // import { useState } from "react";
+// // import { format } from "date-fns";
+// // import properties from "@/lib/propertiesData";
+// // import { useToast } from "@/hooks/use-toast";
+
+// // const PropertyDetails = () => {
+// //   const { id } = useParams();
+// //   const navigate = useNavigate();
+// //   const { toast } = useToast();
+// //   const [checkIn, setCheckIn] = useState<Date>();
+// //   const [checkOut, setCheckOut] = useState<Date>();
+// //   const [guests, setGuests] = useState(1);
+  
+// //   // Find property by id from shared data
+// //   const property = properties.find((p) => p.id === id);
+  
+// //   if (!property) {
+// //     return (
+// //       <div className="min-h-screen bg-background">
+// //         <Navbar />
+// //         <div className="container mx-auto px-4 py-8">
+// //           <Link to="/properties">
+// //             <Button variant="ghost" className="mb-4">
+// //               <ChevronLeft className="h-4 w-4 mr-2" />
+// //               Back to Properties
+// //             </Button>
+// //           </Link>
+// //           <div className="mt-8 text-center">
+// //             <h2 className="text-2xl font-semibold">Property not found</h2>
+// //             <p className="text-muted-foreground mt-2">The property you're looking for doesn't exist.</p>
+// //           </div>
+// //         </div>
+// //       </div>
+// //     );
+// //   }
+
+// //   const calculateNights = () => {
+// //     if (checkIn && checkOut) {
+// //       return Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+// //     }
+// //     return 3; // default
+// //   };
+
+// //   const nights = calculateNights();
+// //   const totalPrice = property.price * nights + 50; // 50 is service fee
+
+// //   const handleReserve = () => {
+// //     if (!checkIn || !checkOut) {
+// //       toast({
+// //         title: "Missing Dates",
+// //         description: "Please select both check-in and check-out dates",
+// //         variant: "destructive",
+// //       });
+// //       return;
+// //     }
+
+// //     if (checkOut <= checkIn) {
+// //       toast({
+// //         title: "Invalid Dates",
+// //         description: "Check-out date must be after check-in date",
+// //         variant: "destructive",
+// //       });
+// //       return;
+// //     }
+
+// //     const user = localStorage.getItem("user");
+// //     const paymentState = {
+// //       propertyId: property.id,
+// //       price: totalPrice,
+// //       checkIn: checkIn.toISOString(),
+// //       checkOut: checkOut.toISOString(),
+// //       guests,
+// //     };
+
+// //     if (user) {
+// //       navigate("/payment", { state: paymentState });
+// //     } else {
+// //       navigate("/login", { state: { redirectTo: "/payment", redirectState: paymentState } });
+// //     }
+// //   };
+
+// //   return (
+// //     <div className="min-h-screen bg-background">
+// //       <Navbar />
+      
+// //       <div className="container mx-auto px-4 py-8">
+// //         <Link to="/properties">
+// //           <Button variant="ghost" className="mb-4">
+// //             <ChevronLeft className="h-4 w-4 mr-2" />
+// //             Back to Properties
+// //           </Button>
+// //         </Link>
+        
+// //         {/* Image Gallery */}
+// //         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 rounded-2xl overflow-hidden">
+// //           <div className="md:col-span-2 md:row-span-2">
+// //             <img 
+// //               src={property.images[0]} 
+// //               alt="Main view"
+// //               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+// //             />
+// //           </div>
+// //           <div className="hidden md:block">
+// //             <img 
+// //               src={property.images[1]} 
+// //               alt="View 2"
+// //               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+// //             />
+// //           </div>
+// //           <div className="hidden md:block">
+// //             <img 
+// //               src={property.images[2]} 
+// //               alt="View 3"
+// //               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+// //             />
+// //           </div>
+// //         </div>
+        
+// //         <div className="grid lg:grid-cols-3 gap-8">
+// //           {/* Property Info */}
+// //           <div className="lg:col-span-2 space-y-6">
+// //             <div>
+// //               <h1 className="text-4xl font-bold mb-4">{property.title}</h1>
+// //               <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-4">
+// //                 <div className="flex items-center gap-1">
+// //                   <Star className="h-5 w-5 fill-accent text-accent" />
+// //                   <span className="font-medium">{property.rating}</span>
+// //                   <span>({property.reviews} reviews)</span>
+// //                 </div>
+// //                 <div className="flex items-center gap-2">
+// //                   <MapPin className="h-5 w-5" />
+// //                   <span>{property.location}</span>
+// //                 </div>
+// //               </div>
+              
+// //               <div className="flex gap-4">
+// //                 <Badge variant="secondary">{property.guests} guests</Badge>
+// //                 <Badge variant="secondary">{property.bedrooms} bedrooms</Badge>
+// //                 <Badge variant="secondary">{property.bathrooms} bathrooms</Badge>
+// //               </div>
+// //             </div>
+            
+// //             <Card>
+// //               <CardContent className="p-6">
+// //                 <h2 className="text-2xl font-semibold mb-4">About this place</h2>
+// //                 <p className="text-muted-foreground leading-relaxed">
+// //                   {property.description}
+// //                 </p>
+// //               </CardContent>
+// //             </Card>
+            
+// //             <Card>
+// //               <CardContent className="p-6">
+// //                 <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
+// //                 <div className="grid grid-cols-2 gap-4">
+// //                   {property.amenities.map((amenity) => (
+// //                     <div key={amenity} className="flex items-center gap-3">
+// //                       {amenity === "WiFi" && <Wifi className="h-5 w-5 text-primary" />}
+// //                       {amenity === "Free Parking" && <Car className="h-5 w-5 text-primary" />}
+// //                       {amenity === "Kitchen" && <Coffee className="h-5 w-5 text-primary" />}
+// //                       <span>{amenity}</span>
+// //                     </div>
+// //                   ))}
+// //                 </div>
+// //               </CardContent>
+// //             </Card>
+            
+// //             <Card>
+// //               <CardContent className="p-6">
+// //                 <h2 className="text-2xl font-semibold mb-4">Meet your host</h2>
+// //                 <div className="flex items-center gap-4">
+// //                   <img 
+// //                     src={property.host.avatar} 
+// //                     alt={property.host.name}
+// //                     className="w-16 h-16 rounded-full object-cover"
+// //                   />
+// //                   <div>
+// //                     <h3 className="font-semibold text-lg">{property.host.name}</h3>
+// //                     <p className="text-sm text-muted-foreground">
+// //                       Hosting since {property.host.joinedDate}
+// //                     </p>
+// //                   </div>
+// //                 </div>
+// //               </CardContent>
+// //             </Card>
+// //           </div>
+          
+// //           {/* Booking Card */}
+// //           <div className="lg:col-span-1">
+// //             <Card className="sticky top-24 border-2">
+// //               <CardContent className="p-6">
+// //                 <div className="mb-6">
+// //                   <span className="text-3xl font-bold text-primary">₹{property.price}</span>
+// //                   <span className="text-muted-foreground"> / night</span>
+// //                 </div>
+                
+// //                 <div className="space-y-4 mb-6">
+// //                   <div>
+// //                     <label className="text-sm font-medium mb-2 block">Check-in</label>
+// //                     <Popover>
+// //                       <PopoverTrigger asChild>
+// //                         <Button variant="outline" className="w-full justify-start">
+// //                           <CalendarIcon className="mr-2 h-4 w-4" />
+// //                           {checkIn ? format(checkIn, "PPP") : "Select date"}
+// //                         </Button>
+// //                       </PopoverTrigger>
+// //                       <PopoverContent className="w-auto p-0">
+// //                         <Calendar mode="single" selected={checkIn} onSelect={setCheckIn} />
+// //                       </PopoverContent>
+// //                     </Popover>
+// //                   </div>
+                  
+// //                   <div>
+// //                     <label className="text-sm font-medium mb-2 block">Check-out</label>
+// //                     <Popover>
+// //                       <PopoverTrigger asChild>
+// //                         <Button variant="outline" className="w-full justify-start">
+// //                           <CalendarIcon className="mr-2 h-4 w-4" />
+// //                           {checkOut ? format(checkOut, "PPP") : "Select date"}
+// //                         </Button>
+// //                       </PopoverTrigger>
+// //                       <PopoverContent className="w-auto p-0">
+// //                         <Calendar mode="single" selected={checkOut} onSelect={setCheckOut} />
+// //                       </PopoverContent>
+// //                     </Popover>
+// //                   </div>
+
+// //                   <div>
+// //                     <label className="text-sm font-medium mb-2 block">Guests</label>
+// //                     <div className="flex items-center gap-3">
+// //                       <button
+// //                         className="px-3 py-2 border rounded-lg hover:bg-accent transition"
+// //                         onClick={() => setGuests(Math.max(1, guests - 1))}
+// //                       >
+// //                         -
+// //                       </button>
+// //                       <span className="flex-1 text-center">{guests}</span>
+// //                       <button
+// //                         className="px-3 py-2 border rounded-lg hover:bg-accent transition"
+// //                         onClick={() => setGuests(Math.min(property.guests, guests + 1))}
+// //                       >
+// //                         +
+// //                       </button>
+// //                     </div>
+// //                   </div>
+// //                 </div>
+                
+// //                 <Button
+// //                   className="w-full mb-4"
+// //                   size="lg"
+// //                   onClick={handleReserve}
+// //                 >
+// //                   Reserve Now
+// //                 </Button>
+                
+// //                 <p className="text-sm text-center text-muted-foreground">
+// //                   You won't be charged yet
+// //                 </p>
+                
+// //                 <div className="mt-6 pt-6 border-t space-y-2">
+// //                   <div className="flex justify-between text-sm">
+// //                     <span className="text-muted-foreground">₹{property.price} × {nights} nights</span>
+// //                     <span>₹{property.price * nights}</span>
+// //                   </div>
+// //                   <div className="flex justify-between text-sm">
+// //                     <span className="text-muted-foreground">Service fee</span>
+// //                     <span>₹50</span>
+// //                   </div>
+// //                   <div className="flex justify-between font-semibold pt-2 border-t">
+// //                     <span>Total</span>
+// //                     <span>₹{totalPrice}</span>
+// //                   </div>
+// //                 </div>
+// //               </CardContent>
+// //             </Card>
+// //           </div>
+// //         </div>
+// //       </div>
+// //     </div>
+// //   );
+// // };
+
+// // export default PropertyDetails;

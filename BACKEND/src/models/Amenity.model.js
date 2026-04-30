@@ -5,16 +5,14 @@ const amenitySchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
       unique: true,
-      trim: true
     },
+
     icon: {
-      type: String
+      type: String, // optional (for future use)
+      default: "",
     },
-    isActive: {
-      type: Boolean,
-      default: true
-    }
   },
   { timestamps: true }
 );

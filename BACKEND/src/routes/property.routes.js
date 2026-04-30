@@ -27,12 +27,19 @@ router.route("/")
 router.get("/my/properties", protect, getMyProperties);
 
 // Admin: Approve / Reject property
-router.route("/admin/:id/status")
-  .patch(
-    protect,
-    isAdmin,
-    updatePropertyStatus
-  );
+router.put(
+  "/admin/:id/approve",
+  protect,
+  isAdmin,
+  updatePropertyStatus
+);
+
+router.put(
+  "/admin/:id/reject",
+  protect,
+  isAdmin,
+  updatePropertyStatus
+);
 
 /* ================================
    OWNER ROUTES

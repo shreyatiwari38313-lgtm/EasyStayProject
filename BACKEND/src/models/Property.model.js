@@ -68,18 +68,24 @@ const propertySchema = new mongoose.Schema(
     },
 
     amenities: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Amenity"
-      }
-    ],
-
+  {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Amenity",
+  },
+],
+     
     images: [
       {
         url: { type: String, required: true },
         isCover: { type: Boolean, default: false }
       }
     ],
+    // 🔥ADD THIS BLOCK HERE
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending"
+   },
 
     isActive: {
       type: Boolean,
